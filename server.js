@@ -150,6 +150,7 @@ app.post('/api/items', requireAuth, async (req, res) => {
     externalId: externalId || undefined,
     addedBy: req.user._id,
     lovers: [req.user._id],
+    watched: [req.user._id],
   });
   const populated = await populateItem(Item.findById(item._id)).lean();
   res.status(201).json(populated);
