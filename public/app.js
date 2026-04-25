@@ -342,8 +342,6 @@ function renderDetail(item) {
         <div class="added-by muted">added by ${escapeHtml(item.addedBy.displayName)}</div>
       </div>
     </div>
-    ${item.notes ? `<div class="detail-notes">${escapeHtml(item.notes)}</div>` : ''}
-
     <div class="action-row detail-actions">
       ${pillsFor(item)}
     </div>
