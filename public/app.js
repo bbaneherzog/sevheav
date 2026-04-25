@@ -7,6 +7,9 @@ const TYPE_LABELS = { show: 'Show', movie: 'Movie', book: 'Book' };
 const watchedLabel = (type) => type === 'book' ? 'read' : 'watched';
 const watchedLabelCap = (type) => type === 'book' ? 'Read' : 'Watched';
 
+const FILTER_KEY = 'sevheav-filter';
+let currentFilter = localStorage.getItem(FILTER_KEY) || 'all';
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -57,6 +60,8 @@ function coverEl(coverUrl, type, size = 'cover') {
 }
 
 const EYE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const BOOK_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+const watchedIcon = (type) => type === 'book' ? BOOK_SVG : EYE_SVG;
 
 function pillsFor(item) {
   const lovers = item.lovers || [];
@@ -70,18 +75,35 @@ function pillsFor(item) {
       <span class="pill-count">${lovers.length}</span>
     </button>
     <button type="button" class="pill watched-pill ${youWatched ? 'on' : ''}" data-action="watched" title="${youWatched ? `Mark un${wLabel}` : `Mark ${wLabel}`}">
-      <span class="pill-icon">${EYE_SVG}</span>
+      <span class="pill-icon">${watchedIcon(item.type)}</span>
       <span class="pill-count">${watched.length}</span>
     </button>
   `;
 }
 
+function filterItems(items) {
+  if (currentFilter === 'all') return items;
+  return items.filter(item => {
+    const youWatched = (item.watched || []).some(w => w._id === ME.id);
+    return currentFilter === 'watched' ? youWatched : !youWatched;
+  });
+}
+
 function renderColumns() {
   for (const type of ['show', 'movie', 'book']) {
     const container = $(`[data-items="${type}"]`);
-    const items = allItems[type] || [];
+    const allInColumn = allItems[type] || [];
+    const items = filterItems(allInColumn);
     if (items.length === 0) {
-      container.innerHTML = `<p class="muted" style="padding: 0.5rem;">Nothing yet — be the first.</p>`;
+      let message;
+      if (allInColumn.length === 0) {
+        message = 'Nothing yet — be the first.';
+      } else if (currentFilter === 'unwatched') {
+        message = `Nothing left to ${type === 'book' ? 'read' : 'watch'}.`;
+      } else {
+        message = `You haven't ${type === 'book' ? 'read' : 'watched'} anything here yet.`;
+      }
+      container.innerHTML = `<p class="muted" style="padding: 0.5rem;">${message}</p>`;
       continue;
     }
     container.innerHTML = items.map(item => {
@@ -287,6 +309,20 @@ function chipsFor(users) {
   }).join('');
 }
 
+function commentsHTML(item) {
+  const comments = item.comments || [];
+  if (comments.length === 0) return '<p class="muted comments-empty">No comments yet.</p>';
+  return comments.map(c => {
+    const mine = c.user && c.user._id === ME.id;
+    return `
+      <div class="comment">
+        <div class="comment-text">${escapeHtml(c.text)} <span class="comment-author">-${escapeHtml(c.user?.displayName || 'unknown')}</span></div>
+        ${mine ? `<button type="button" class="comment-delete" data-comment-id="${c._id}" title="Delete">×</button>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
 function renderDetail(item) {
   const lovers = item.lovers || [];
   const watched = item.watched || [];
@@ -317,8 +353,17 @@ function renderDetail(item) {
     </div>
 
     <div class="lovers-section">
-      <h3>${watched.length} ${wLabel}${watched.length === 1 ? '' : (item.type === 'book' ? '' : '')}</h3>
+      <h3>${watched.length} ${wLabel}</h3>
       <div class="chips watched-chips">${chipsFor(watched)}</div>
+    </div>
+
+    <div class="comments-section">
+      <h3>Comments</h3>
+      <div class="comments">${commentsHTML(item)}</div>
+      <form class="comment-form">
+        <textarea name="text" placeholder="Add a comment…" rows="2" required maxlength="500"></textarea>
+        <button type="submit" class="primary">Post</button>
+      </form>
     </div>
 
     <div class="modal-actions">
@@ -343,7 +388,53 @@ function renderDetail(item) {
     } catch (err) { alert(err.message); }
   });
   $('button[data-close]', detailContent)?.addEventListener('click', closeDetail);
+
+  // Comment form
+  const commentForm = $('.comment-form', detailContent);
+  commentForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = commentForm.text.value.trim();
+    if (!text) return;
+    try {
+      const updated = await api(`/api/items/${item._id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ text }),
+      });
+      updateItemInCache(updated);
+      renderColumns();
+      renderDetail(updated);
+    } catch (err) { alert(err.message); }
+  });
+
+  // Comment delete (own comments only)
+  $$('.comment-delete', detailContent).forEach(b => {
+    b.addEventListener('click', async () => {
+      if (!confirm('Delete this comment?')) return;
+      try {
+        const updated = await api(`/api/items/${item._id}/comments/${b.dataset.commentId}`, { method: 'DELETE' });
+        updateItemInCache(updated);
+        renderColumns();
+        renderDetail(updated);
+      } catch (err) { alert(err.message); }
+    });
+  });
 }
+
+// Watched filter
+function applyFilterUI() {
+  $$('.segment-btn', $('#watch-filter')).forEach(b =>
+    b.classList.toggle('active', b.dataset.filter === currentFilter)
+  );
+}
+$('#watch-filter').addEventListener('click', (e) => {
+  const btn = e.target.closest('.segment-btn');
+  if (!btn) return;
+  currentFilter = btn.dataset.filter;
+  localStorage.setItem(FILTER_KEY, currentFilter);
+  applyFilterUI();
+  renderColumns();
+});
+applyFilterUI();
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {

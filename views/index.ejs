@@ -10,6 +10,11 @@
   <header>
     <h1>sevheav</h1>
     <div class="header-actions">
+      <div class="segment-control" id="watch-filter">
+        <button type="button" class="segment-btn" data-filter="all">All</button>
+        <button type="button" class="segment-btn" data-filter="unwatched">Unwatched</button>
+        <button type="button" class="segment-btn" data-filter="watched">Watched</button>
+      </div>
       <span class="muted">hi, <strong><%= user.displayName %></strong></span>
       <button id="add-btn" class="primary">+ Add</button>
       <form method="post" action="/logout" style="display:inline">

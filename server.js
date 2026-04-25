@@ -24,6 +24,12 @@ const User = mongoose.model('User', new mongoose.Schema({
   passwordHash: { type: String, required: true },
 }));
 
+const commentSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  text: { type: String, required: true, trim: true, maxlength: 500 },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const Item = mongoose.model('Item', new mongoose.Schema({
   type: { type: String, enum: TYPES, required: true },
   title: { type: String, required: true, trim: true },
@@ -34,8 +40,17 @@ const Item = mongoose.model('Item', new mongoose.Schema({
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   lovers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   watched: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  comments: [commentSchema],
   createdAt: { type: Date, default: Date.now },
 }));
+
+function populateItem(query) {
+  return query
+    .populate('addedBy', 'username displayName')
+    .populate('lovers', 'username displayName')
+    .populate('watched', 'username displayName')
+    .populate('comments.user', 'username displayName');
+}
 
 await mongoose.connect(MONGO_URI);
 
@@ -108,11 +123,7 @@ app.get('/api/me', requireAuth, (req, res) => {
 });
 
 app.get('/api/items', requireAuth, async (_req, res) => {
-  const items = await Item.find()
-    .populate('addedBy', 'username displayName')
-    .populate('lovers', 'username displayName')
-    .populate('watched', 'username displayName')
-    .lean();
+  const items = await populateItem(Item.find()).lean();
   const groups = { show: [], movie: [], book: [] };
   for (const item of items) {
     if (groups[item.type]) groups[item.type].push(item);
@@ -140,11 +151,7 @@ app.post('/api/items', requireAuth, async (req, res) => {
     addedBy: req.user._id,
     lovers: [req.user._id],
   });
-  const populated = await Item.findById(item._id)
-    .populate('addedBy', 'username displayName')
-    .populate('lovers', 'username displayName')
-    .populate('watched', 'username displayName')
-    .lean();
+  const populated = await populateItem(Item.findById(item._id)).lean();
   res.status(201).json(populated);
 });
 
@@ -157,16 +164,36 @@ async function toggleField(req, res, field) {
   if (idx === -1) list.push(userId);
   else list.splice(idx, 1);
   await item.save();
-  const populated = await Item.findById(item._id)
-    .populate('addedBy', 'username displayName')
-    .populate('lovers', 'username displayName')
-    .populate('watched', 'username displayName')
-    .lean();
+  const populated = await populateItem(Item.findById(item._id)).lean();
   res.json(populated);
 }
 
 app.post('/api/items/:id/love', requireAuth, (req, res) => toggleField(req, res, 'lovers'));
 app.post('/api/items/:id/watched', requireAuth, (req, res) => toggleField(req, res, 'watched'));
+
+app.post('/api/items/:id/comments', requireAuth, async (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'comment cannot be empty' });
+  if (text.length > 500) return res.status(400).json({ error: 'comment too long (500 chars max)' });
+  const item = await Item.findById(req.params.id);
+  if (!item) return res.status(404).json({ error: 'not found' });
+  item.comments.push({ user: req.user._id, text });
+  await item.save();
+  const populated = await populateItem(Item.findById(item._id)).lean();
+  res.status(201).json(populated);
+});
+
+app.delete('/api/items/:itemId/comments/:commentId', requireAuth, async (req, res) => {
+  const item = await Item.findById(req.params.itemId);
+  if (!item) return res.status(404).json({ error: 'not found' });
+  const comment = item.comments.id(req.params.commentId);
+  if (!comment) return res.status(404).json({ error: 'comment not found' });
+  if (!comment.user.equals(req.user._id)) return res.status(403).json({ error: 'you can only delete your own comments' });
+  comment.deleteOne();
+  await item.save();
+  const populated = await populateItem(Item.findById(item._id)).lean();
+  res.json(populated);
+});
 
 app.delete('/api/items/:id', requireAuth, async (req, res) => {
   const item = await Item.findById(req.params.id);
