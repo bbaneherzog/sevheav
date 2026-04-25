@@ -94,7 +94,6 @@ function renderColumns() {
             ${subtitle}
             <div class="action-row">
               ${pillsFor(item)}
-              <span class="muted added-by">added by ${escapeHtml(item.addedBy.displayName)}</span>
             </div>
           </div>
         </div>
