@@ -170,7 +170,24 @@ async function toggleField(req, res, field) {
   res.json(populated);
 }
 
-app.post('/api/items/:id/love', requireAuth, (req, res) => toggleField(req, res, 'lovers'));
+app.post('/api/items/:id/love', requireAuth, async (req, res) => {
+  const item = await Item.findById(req.params.id);
+  if (!item) return res.status(404).json({ error: 'not found' });
+  const userId = req.user._id;
+  const idx = item.lovers.findIndex(id => id.equals(userId));
+  if (idx === -1) {
+    // adding a love — implies watched too
+    item.lovers.push(userId);
+    if (!item.watched.some(id => id.equals(userId))) item.watched.push(userId);
+  } else {
+    // removing a love — leave watched alone (you can love and un-love something you've still watched)
+    item.lovers.splice(idx, 1);
+  }
+  await item.save();
+  const populated = await populateItem(Item.findById(item._id)).lean();
+  res.json(populated);
+});
+
 app.post('/api/items/:id/watched', requireAuth, (req, res) => toggleField(req, res, 'watched'));
 
 app.post('/api/items/:id/comments', requireAuth, async (req, res) => {
