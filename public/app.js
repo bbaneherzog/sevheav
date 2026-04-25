@@ -348,11 +348,9 @@ function renderDetail(item) {
         <div class="muted">${TYPE_LABELS[item.type]}</div>
         <h2>${escapeHtml(item.title)}</h2>
         ${item.author ? `<div class="author">${escapeHtml(item.author)}</div>` : ''}
+        <div class="action-row detail-actions">${pillsFor(item)}</div>
         <div class="added-by muted">added by ${escapeHtml(item.addedBy.displayName)}</div>
       </div>
-    </div>
-    <div class="action-row detail-actions">
-      ${pillsFor(item)}
     </div>
 
     <div class="lovers-section">
