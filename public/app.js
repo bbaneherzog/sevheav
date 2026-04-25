@@ -20,6 +20,7 @@ const addBtn = $('#add-btn');
 const addModal = $('#add-modal');
 const addForm = $('#add-form');
 const typeSelect = $('#type-select');
+const getType = () => addForm.querySelector('input[name="type"]:checked')?.value || 'show';
 const titleInput = $('#title-input');
 const authorInput = $('#author-input');
 const authorLabel = $('#author-label');
@@ -197,7 +198,7 @@ typeSelect.addEventListener('change', () => {
 });
 
 function syncTypeUI() {
-  const isBook = typeSelect.value === 'book';
+  const isBook = getType() === 'book';
   authorLabel.classList.toggle('hidden', !isBook);
 }
 
@@ -220,7 +221,7 @@ titleInput.addEventListener('focus', () => {
 
 async function runAutocomplete() {
   const q = titleInput.value.trim();
-  const type = typeSelect.value;
+  const type = getType();
   if (q.length < 2) {
     acResults.classList.add('hidden');
     acResults.innerHTML = '';
@@ -266,7 +267,7 @@ async function runAutocomplete() {
 
 function pickAutocomplete(res) {
   titleInput.value = res.title;
-  if (typeSelect.value === 'book' && res.author) authorInput.value = res.author;
+  if (getType() === 'book' && res.author) authorInput.value = res.author;
   coverInput.value = res.coverUrl || '';
   externalInput.value = res.externalId || '';
   acResults.classList.add('hidden');
