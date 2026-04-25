@@ -188,7 +188,7 @@ header h1 { font-size: 1.25rem; }
 /* Detail modal */
 .detail-header { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
 .detail-cover {
-  width: 110px; height: 165px; border-radius: 6px; object-fit: cover;
+  width: 80px; height: 120px; border-radius: 6px; object-fit: cover;
   background: linear-gradient(135deg,#e0e0e5,#cfcfd4); flex: 0 0 auto;
 }
 .detail-info h2 { font-size: 1.2rem; line-height: 1.3; margin-top: 0.2rem; }
