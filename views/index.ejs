@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sevheav</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body data-user-id="<%= user._id %>" data-user-name="<%= user.displayName %>">
+  <header>
+    <h1>sevheav</h1>
+    <div class="header-actions">
+      <span class="muted">hi, <strong><%= user.displayName %></strong></span>
+      <button id="add-btn" class="primary">+ Add</button>
+      <form method="post" action="/logout" style="display:inline">
+        <button type="submit" class="ghost">Sign out</button>
+      </form>
+    </div>
+  </header>
+
+  <main class="columns">
+    <section class="column" data-type="show">
+      <h2>Shows</h2>
+      <div class="items" data-items="show"></div>
+    </section>
+    <section class="column" data-type="movie">
+      <h2>Movies</h2>
+      <div class="items" data-items="movie"></div>
+    </section>
+    <section class="column" data-type="book">
+      <h2>Books</h2>
+      <div class="items" data-items="book"></div>
+    </section>
+  </main>
+
+  <div id="add-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h2>Add a title</h2>
+      <form id="add-form">
+        <label>
+          <span>Type</span>
+          <select name="type" id="type-select">
+            <option value="show">Show</option>
+            <option value="movie">Movie</option>
+            <option value="book">Book</option>
+          </select>
+        </label>
+        <label class="autocomplete">
+          <span>Title</span>
+          <input name="title" id="title-input" autocomplete="off" required />
+          <div id="autocomplete-results" class="autocomplete-results hidden"></div>
+        </label>
+        <label id="author-label">
+          <span>Author</span>
+          <input name="author" id="author-input" autocomplete="off" />
+        </label>
+        <label>
+          <span>Notes (optional)</span>
+          <textarea name="notes" rows="3"></textarea>
+        </label>
+        <input type="hidden" name="coverUrl" id="cover-input" />
+        <input type="hidden" name="externalId" id="external-input" />
+        <p id="add-error" class="error hidden"></p>
+        <div class="modal-actions">
+          <button type="button" class="ghost" data-close>Cancel</button>
+          <button type="submit" class="primary">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="detail-modal" class="modal-backdrop hidden">
+    <div class="modal" id="detail-content"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

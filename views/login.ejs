@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>sevheav · sign in</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="auth-page">
+  <main class="auth-card">
+    <h1>sevheav</h1>
+    <p class="muted">stuff worth watching &amp; reading</p>
+    <form method="post" action="/login" autocomplete="off">
+      <label>
+        <span>Name</span>
+        <input name="username" autofocus required value="<%= username %>" />
+      </label>
+      <label>
+        <span>Password</span>
+        <input name="password" type="password" required />
+      </label>
+      <% if (error) { %><p class="error"><%= error %></p><% } %>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+  </main>
+</body>
+</html>
