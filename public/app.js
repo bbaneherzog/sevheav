@@ -421,20 +421,36 @@ function renderDetail(item) {
   });
 }
 
-// Watched filter
+// Watched filter — single eye-icon button cycling: all → unwatched → watched
+const FILTER_STATES = ['all', 'unwatched', 'watched'];
+const FILTER_EYE_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const FILTER_EYE_OFF_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/></svg>`;
+
 function applyFilterUI() {
-  $$('.segment-btn', $('#watch-filter')).forEach(b =>
-    b.classList.toggle('active', b.dataset.filter === currentFilter)
-  );
+  const btn = $('#filter-toggle');
+  const icon = $('#filter-icon');
+  btn.classList.remove('state-all', 'state-unwatched', 'state-watched');
+  btn.classList.add(`state-${currentFilter}`);
+  if (currentFilter === 'unwatched') {
+    icon.innerHTML = FILTER_EYE_OFF_SVG;
+    btn.title = 'Showing unwatched — tap for watched';
+  } else if (currentFilter === 'watched') {
+    icon.innerHTML = FILTER_EYE_SVG;
+    btn.title = 'Showing watched — tap for all';
+  } else {
+    icon.innerHTML = FILTER_EYE_SVG;
+    btn.title = 'Showing all — tap for unwatched';
+  }
 }
-$('#watch-filter').addEventListener('click', (e) => {
-  const btn = e.target.closest('.segment-btn');
-  if (!btn) return;
-  currentFilter = btn.dataset.filter;
+
+$('#filter-toggle').addEventListener('click', () => {
+  const idx = FILTER_STATES.indexOf(currentFilter);
+  currentFilter = FILTER_STATES[(idx + 1) % FILTER_STATES.length];
   localStorage.setItem(FILTER_KEY, currentFilter);
   applyFilterUI();
   renderColumns();
 });
+
 applyFilterUI();
 
 document.addEventListener('keydown', (e) => {

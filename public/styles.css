@@ -181,28 +181,37 @@ header h1 { font-size: 1.25rem; }
 .watched-chips .chip { background: #e3f7e8; color: #1f7a37; }
 .watched-chips .chip.you { background: #34c759; color: white; }
 
-/* Segment control (watched filter) */
-.segment-control {
-  display: inline-flex;
-  background: #e8e8ed;
-  border-radius: 8px;
-  padding: 2px;
-}
-.segment-btn {
-  background: transparent;
-  border: none;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: #424245;
-  cursor: pointer;
-}
-.segment-btn:hover { background: rgba(0,0,0,0.04); }
-.segment-btn.active {
+/* Filter toggle (cycles all → unwatched → watched) */
+.filter-toggle {
+  width: 38px; height: 38px;
+  display: inline-flex; align-items: center; justify-content: center;
   background: white;
-  color: #1d1d1f;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
-  font-weight: 500;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6e6e73;
+  padding: 0;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.filter-toggle:hover { background: #f5f5f7; }
+.filter-toggle svg { width: 18px; height: 18px; display: block; }
+.filter-toggle.state-unwatched {
+  background: #fff5e6;
+  border-color: #ffb84d;
+  color: #b75900;
+}
+.filter-toggle.state-watched {
+  background: #34c759;
+  border-color: #34c759;
+  color: white;
+}
+
+/* Mobile polish */
+@media (max-width: 600px) {
+  header { padding: 0.75rem 1rem; }
+  header h1 { font-size: 1.1rem; }
+  .header-greeting { display: none; }
+  .header-actions { gap: 0.5rem; }
 }
 
 /* Comments */
