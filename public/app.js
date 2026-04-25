@@ -56,6 +56,8 @@ function coverEl(coverUrl, type, size = 'cover') {
   return `<div class="${size} cover-fallback">${fallbackEmoji(type)}</div>`;
 }
 
+const EYE_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`;
+
 function pillsFor(item) {
   const lovers = item.lovers || [];
   const watched = item.watched || [];
@@ -68,7 +70,7 @@ function pillsFor(item) {
       <span class="pill-count">${lovers.length}</span>
     </button>
     <button type="button" class="pill watched-pill ${youWatched ? 'on' : ''}" data-action="watched" title="${youWatched ? `Mark un${wLabel}` : `Mark ${wLabel}`}">
-      <span class="pill-icon">${youWatched ? '✓' : '○'}</span>
+      <span class="pill-icon">${EYE_SVG}</span>
       <span class="pill-count">${watched.length}</span>
     </button>
   `;
