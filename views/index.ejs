@@ -16,10 +16,19 @@
       <span class="muted header-greeting">hi, <strong><%= user.displayName %></strong></span>
       <button id="add-btn" class="primary">+ Add</button>
       <form method="post" action="/logout" style="display:inline">
-        <button type="submit" class="ghost">Sign out</button>
+        <button type="submit" class="ghost icon-btn" aria-label="Sign out" title="Sign out">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span class="btn-label">Sign out</span>
+        </button>
       </form>
     </div>
   </header>
+
+  <div class="column-toggle" id="column-toggle">
+    <button type="button" data-col="show">Shows</button>
+    <button type="button" data-col="movie">Movies</button>
+    <button type="button" data-col="book">Books</button>
+  </div>
 
   <main class="columns">
     <section class="column" data-type="show">
@@ -56,6 +65,10 @@
         <label id="author-label">
           <span>Author</span>
           <input name="author" id="author-input" autocomplete="off" />
+        </label>
+        <label>
+          <span>Comment (optional)</span>
+          <textarea name="comment" rows="2" maxlength="500" placeholder="A quick take — will be signed with your name"></textarea>
         </label>
         <input type="hidden" name="coverUrl" id="cover-input" />
         <input type="hidden" name="externalId" id="external-input" />

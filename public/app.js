@@ -10,6 +10,9 @@ const watchedLabelCap = (type) => type === 'book' ? 'Read' : 'Watched';
 const FILTER_KEY = 'sevheav-filter';
 let currentFilter = localStorage.getItem(FILTER_KEY) || 'all';
 
+const COLUMN_KEY = 'sevheav-column';
+let currentColumn = localStorage.getItem(COLUMN_KEY) || 'show';
+
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -273,9 +276,15 @@ addForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   addError.classList.add('hidden');
   const fd = new FormData(addForm);
-  const payload = Object.fromEntries(fd.entries());
+  const { comment, ...payload } = Object.fromEntries(fd.entries());
   try {
-    await api('/api/items', { method: 'POST', body: JSON.stringify(payload) });
+    const created = await api('/api/items', { method: 'POST', body: JSON.stringify(payload) });
+    if (comment && comment.trim()) {
+      await api(`/api/items/${created._id}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ text: comment.trim() }),
+      });
+    }
     addModal.classList.add('hidden');
     await loadItems();
   } catch (err) {
@@ -450,6 +459,20 @@ $('#filter-toggle').addEventListener('click', () => {
 });
 
 applyFilterUI();
+
+// Mobile column toggle (Shows / Movies / Books)
+function applyColumnUI() {
+  $$('.column').forEach(c => c.classList.toggle('is-active', c.dataset.type === currentColumn));
+  $$('#column-toggle button').forEach(b => b.classList.toggle('active', b.dataset.col === currentColumn));
+}
+$('#column-toggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-col]');
+  if (!btn) return;
+  currentColumn = btn.dataset.col;
+  localStorage.setItem(COLUMN_KEY, currentColumn);
+  applyColumnUI();
+});
+applyColumnUI();
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
