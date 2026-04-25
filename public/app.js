@@ -138,10 +138,11 @@ function updateItemInCache(updated) {
     const i = allItems[t].findIndex(x => x._id === updated._id);
     if (i !== -1) allItems[t][i] = updated;
   }
-  // re-sort by love count desc, then createdAt desc
+  // re-sort by total engagement (loves + watches) desc, then createdAt desc
+  const score = (i) => (i.lovers || []).length + (i.watched || []).length;
   for (const t of Object.keys(allItems)) {
     allItems[t].sort((a, b) =>
-      ((b.lovers || []).length - (a.lovers || []).length) ||
+      (score(b) - score(a)) ||
       (new Date(b.createdAt) - new Date(a.createdAt))
     );
   }

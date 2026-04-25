@@ -128,9 +128,10 @@ app.get('/api/items', requireAuth, async (_req, res) => {
   for (const item of items) {
     if (groups[item.type]) groups[item.type].push(item);
   }
+  const score = (i) => (i.lovers?.length || 0) + (i.watched?.length || 0);
   for (const t of TYPES) {
     groups[t].sort((a, b) =>
-      (b.lovers.length - a.lovers.length) ||
+      (score(b) - score(a)) ||
       (new Date(b.createdAt) - new Date(a.createdAt))
     );
   }
