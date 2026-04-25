@@ -33,6 +33,7 @@ const Item = mongoose.model('Item', new mongoose.Schema({
   externalId: String,
   addedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   lovers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  watched: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now },
 }));
 
@@ -110,6 +111,7 @@ app.get('/api/items', requireAuth, async (_req, res) => {
   const items = await Item.find()
     .populate('addedBy', 'username displayName')
     .populate('lovers', 'username displayName')
+    .populate('watched', 'username displayName')
     .lean();
   const groups = { show: [], movie: [], book: [] };
   for (const item of items) {
@@ -141,24 +143,30 @@ app.post('/api/items', requireAuth, async (req, res) => {
   const populated = await Item.findById(item._id)
     .populate('addedBy', 'username displayName')
     .populate('lovers', 'username displayName')
+    .populate('watched', 'username displayName')
     .lean();
   res.status(201).json(populated);
 });
 
-app.post('/api/items/:id/love', requireAuth, async (req, res) => {
+async function toggleField(req, res, field) {
   const item = await Item.findById(req.params.id);
   if (!item) return res.status(404).json({ error: 'not found' });
   const userId = req.user._id;
-  const idx = item.lovers.findIndex(id => id.equals(userId));
-  if (idx === -1) item.lovers.push(userId);
-  else item.lovers.splice(idx, 1);
+  const list = item[field];
+  const idx = list.findIndex(id => id.equals(userId));
+  if (idx === -1) list.push(userId);
+  else list.splice(idx, 1);
   await item.save();
   const populated = await Item.findById(item._id)
     .populate('addedBy', 'username displayName')
     .populate('lovers', 'username displayName')
+    .populate('watched', 'username displayName')
     .lean();
   res.json(populated);
-});
+}
+
+app.post('/api/items/:id/love', requireAuth, (req, res) => toggleField(req, res, 'lovers'));
+app.post('/api/items/:id/watched', requireAuth, (req, res) => toggleField(req, res, 'watched'));
 
 app.delete('/api/items/:id', requireAuth, async (req, res) => {
   const item = await Item.findById(req.params.id);

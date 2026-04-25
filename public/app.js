@@ -4,6 +4,8 @@ const ME = {
 };
 
 const TYPE_LABELS = { show: 'Show', movie: 'Movie', book: 'Book' };
+const watchedLabel = (type) => type === 'book' ? 'read' : 'watched';
+const watchedLabelCap = (type) => type === 'book' ? 'Read' : 'Watched';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -22,8 +24,10 @@ const addError = $('#add-error');
 
 const detailModal = $('#detail-modal');
 const detailContent = $('#detail-content');
+const columnsEl = $('main.columns');
 
 let allItems = { show: [], movie: [], book: [] };
+let openDetailId = null;
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -43,13 +47,31 @@ function escapeHtml(str) {
   }[c]));
 }
 
-function coverEl(coverUrl, fallbackEmoji) {
-  if (coverUrl) return `<img class="cover" src="${escapeHtml(coverUrl)}" alt="" loading="lazy" />`;
-  return `<div class="cover">${fallbackEmoji}</div>`;
-}
-
 function fallbackEmoji(type) {
   return { show: '📺', movie: '🎬', book: '📖' }[type] || '✨';
+}
+
+function coverEl(coverUrl, type, size = 'cover') {
+  if (coverUrl) return `<img class="${size}" src="${escapeHtml(coverUrl)}" alt="" loading="lazy" />`;
+  return `<div class="${size} cover-fallback">${fallbackEmoji(type)}</div>`;
+}
+
+function pillsFor(item) {
+  const lovers = item.lovers || [];
+  const watched = item.watched || [];
+  const youLove = lovers.some(l => l._id === ME.id);
+  const youWatched = watched.some(w => w._id === ME.id);
+  const wLabel = watchedLabel(item.type);
+  return `
+    <button type="button" class="pill love-pill ${youLove ? 'on' : ''}" data-action="love" title="${youLove ? 'Unlove' : 'Love'}">
+      <span class="pill-icon">${youLove ? '♥' : '♡'}</span>
+      <span class="pill-count">${lovers.length}</span>
+    </button>
+    <button type="button" class="pill watched-pill ${youWatched ? 'on' : ''}" data-action="watched" title="${youWatched ? `Mark un${wLabel}` : `Mark ${wLabel}`}">
+      <span class="pill-icon">${youWatched ? '✓' : '○'}</span>
+      <span class="pill-count">${watched.length}</span>
+    </button>
+  `;
 }
 
 function renderColumns() {
@@ -61,19 +83,16 @@ function renderColumns() {
       continue;
     }
     container.innerHTML = items.map(item => {
-      const loved = item.lovers.some(l => l._id === ME.id);
       const subtitle = item.author ? `<div class="author">${escapeHtml(item.author)}</div>` : '';
       return `
         <div class="item" data-id="${item._id}">
-          ${coverEl(item.coverUrl, fallbackEmoji(type))}
+          ${coverEl(item.coverUrl, type)}
           <div class="body">
             <div class="title">${escapeHtml(item.title)}</div>
             ${subtitle}
-            <div class="meta">
-              <span class="heart">${loved ? '♥' : '♡'}</span>
-              <span>${item.lovers.length}</span>
-              <span>·</span>
-              <span>added by ${escapeHtml(item.addedBy.displayName)}</span>
+            <div class="action-row">
+              ${pillsFor(item)}
+              <span class="muted added-by">added by ${escapeHtml(item.addedBy.displayName)}</span>
             </div>
           </div>
         </div>
@@ -85,11 +104,45 @@ function renderColumns() {
 async function loadItems() {
   allItems = await api('/api/items');
   renderColumns();
+  if (openDetailId) {
+    const item = Object.values(allItems).flat().find(i => i._id === openDetailId);
+    if (item) renderDetail(item); else closeDetail();
+  }
 }
 
-document.addEventListener('click', (e) => {
+function updateItemInCache(updated) {
+  for (const t of Object.keys(allItems)) {
+    const i = allItems[t].findIndex(x => x._id === updated._id);
+    if (i !== -1) allItems[t][i] = updated;
+  }
+  // re-sort by love count desc, then createdAt desc
+  for (const t of Object.keys(allItems)) {
+    allItems[t].sort((a, b) =>
+      ((b.lovers || []).length - (a.lovers || []).length) ||
+      (new Date(b.createdAt) - new Date(a.createdAt))
+    );
+  }
+}
+
+async function toggle(itemId, action) {
+  const updated = await api(`/api/items/${itemId}/${action}`, { method: 'POST' });
+  updateItemInCache(updated);
+  renderColumns();
+  if (openDetailId === itemId) renderDetail(updated);
+}
+
+// Click delegation: pills toggle, item body opens detail
+columnsEl.addEventListener('click', (e) => {
+  const pill = e.target.closest('.pill[data-action]');
   const itemEl = e.target.closest('.item[data-id]');
-  if (itemEl) openDetail(itemEl.dataset.id);
+  if (!itemEl) return;
+  const itemId = itemEl.dataset.id;
+  if (pill) {
+    e.stopPropagation();
+    toggle(itemId, pill.dataset.action).catch(err => alert(err.message));
+    return;
+  }
+  openDetail(itemId);
 });
 
 // Add modal
@@ -113,7 +166,6 @@ addModal.addEventListener('click', (e) => {
 
 typeSelect.addEventListener('change', () => {
   syncTypeUI();
-  // re-trigger autocomplete with new type
   if (titleInput.value.trim().length >= 2) runAutocomplete();
 });
 
@@ -125,7 +177,6 @@ function syncTypeUI() {
 let acTimer = null;
 let acAbort = null;
 titleInput.addEventListener('input', () => {
-  // user typed manually -> drop any previously chosen autocomplete data
   coverInput.value = '';
   externalInput.value = '';
   clearTimeout(acTimer);
@@ -133,7 +184,6 @@ titleInput.addEventListener('input', () => {
 });
 
 titleInput.addEventListener('blur', () => {
-  // delay so click on a result still fires
   setTimeout(() => acResults.classList.add('hidden'), 150);
 });
 
@@ -214,83 +264,90 @@ addForm.addEventListener('submit', async (e) => {
 function openDetail(itemId) {
   const item = Object.values(allItems).flat().find(i => i._id === itemId);
   if (!item) return;
+  openDetailId = itemId;
   renderDetail(item);
   detailModal.classList.remove('hidden');
 }
 
+function closeDetail() {
+  openDetailId = null;
+  detailModal.classList.add('hidden');
+}
+
 detailModal.addEventListener('click', (e) => {
-  if (e.target === detailModal) detailModal.classList.add('hidden');
+  if (e.target === detailModal) closeDetail();
 });
 
-function renderDetail(item) {
-  const loved = item.lovers.some(l => l._id === ME.id);
-  const isMine = item.addedBy._id === ME.id;
-  const lovers = item.lovers.map(l => {
-    const youCls = l._id === ME.id ? ' you' : '';
-    return `<span class="lover-chip${youCls}">${escapeHtml(l.displayName)}</span>`;
+function chipsFor(users) {
+  if (!users || users.length === 0) return '<span class="muted">nobody yet</span>';
+  return users.map(u => {
+    const youCls = u._id === ME.id ? ' you' : '';
+    return `<span class="chip${youCls}">${escapeHtml(u.displayName)}</span>`;
   }).join('');
+}
+
+function renderDetail(item) {
+  const lovers = item.lovers || [];
+  const watched = item.watched || [];
+  const youLove = lovers.some(l => l._id === ME.id);
+  const youWatched = watched.some(w => w._id === ME.id);
+  const isMine = item.addedBy._id === ME.id;
+  const wLabel = watchedLabel(item.type);
+  const wLabelCap = watchedLabelCap(item.type);
   detailContent.innerHTML = `
     <div class="detail-header">
-      ${item.coverUrl
-        ? `<img class="detail-cover" src="${escapeHtml(item.coverUrl)}" alt="" />`
-        : `<div class="detail-cover" style="display:grid;place-items:center;font-size:2rem;">${fallbackEmoji(item.type)}</div>`}
+      ${coverEl(item.coverUrl, item.type, 'detail-cover')}
       <div class="detail-info">
         <div class="muted">${TYPE_LABELS[item.type]}</div>
         <h2>${escapeHtml(item.title)}</h2>
         ${item.author ? `<div class="author">${escapeHtml(item.author)}</div>` : ''}
-        <div class="added-by">added by ${escapeHtml(item.addedBy.displayName)}</div>
+        <div class="added-by muted">added by ${escapeHtml(item.addedBy.displayName)}</div>
       </div>
     </div>
     ${item.notes ? `<div class="detail-notes">${escapeHtml(item.notes)}</div>` : ''}
-    <div class="lovers-section">
-      <h3>${item.lovers.length} love${item.lovers.length === 1 ? '' : 's'}</h3>
-      <div class="lovers">${lovers || '<span class="muted">nobody yet</span>'}</div>
+
+    <div class="action-row detail-actions">
+      ${pillsFor(item)}
     </div>
+
+    <div class="lovers-section">
+      <h3>${lovers.length} love${lovers.length === 1 ? '' : 's'}</h3>
+      <div class="chips love-chips">${chipsFor(lovers)}</div>
+    </div>
+
+    <div class="lovers-section">
+      <h3>${watched.length} ${wLabel}${watched.length === 1 ? '' : (item.type === 'book' ? '' : '')}</h3>
+      <div class="chips watched-chips">${chipsFor(watched)}</div>
+    </div>
+
     <div class="modal-actions">
       ${isMine ? `<button type="button" class="danger" data-action="delete">Delete</button>` : ''}
       <button type="button" class="ghost" data-close>Close</button>
-      <button type="button" class="primary" data-action="love">${loved ? '♥ Unlove' : '♡ Love'}</button>
     </div>
   `;
-  $$('button[data-action]', detailContent).forEach(b => {
+  // pill toggles inside detail modal
+  $$('.pill[data-action]', detailContent).forEach(b => {
     b.addEventListener('click', async () => {
-      try {
-        if (b.dataset.action === 'love') {
-          const updated = await api(`/api/items/${item._id}/love`, { method: 'POST' });
-          // splice the updated item into local cache and re-render
-          for (const t of Object.keys(allItems)) {
-            const i = allItems[t].findIndex(x => x._id === item._id);
-            if (i !== -1) allItems[t][i] = updated;
-          }
-          // re-sort by love count
-          for (const t of Object.keys(allItems)) {
-            allItems[t].sort((a, b) =>
-              (b.lovers.length - a.lovers.length) ||
-              (new Date(b.createdAt) - new Date(a.createdAt))
-            );
-          }
-          renderColumns();
-          renderDetail(updated);
-        } else if (b.dataset.action === 'delete') {
-          if (!confirm('Delete this title?')) return;
-          await api(`/api/items/${item._id}`, { method: 'DELETE' });
-          detailModal.classList.add('hidden');
-          await loadItems();
-        }
-      } catch (err) {
-        alert(err.message);
-      }
+      try { await toggle(item._id, b.dataset.action); }
+      catch (err) { alert(err.message); }
     });
   });
-  $('button[data-close]', detailContent)?.addEventListener('click', () => {
-    detailModal.classList.add('hidden');
+  // delete button
+  $('button[data-action="delete"]', detailContent)?.addEventListener('click', async () => {
+    if (!confirm('Delete this title?')) return;
+    try {
+      await api(`/api/items/${item._id}`, { method: 'DELETE' });
+      closeDetail();
+      await loadItems();
+    } catch (err) { alert(err.message); }
   });
+  $('button[data-close]', detailContent)?.addEventListener('click', closeDetail);
 }
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     addModal.classList.add('hidden');
-    detailModal.classList.add('hidden');
+    closeDetail();
   }
 });
 

@@ -85,19 +85,41 @@ header h1 { font-size: 1.25rem; }
   transition: background 0.1s;
 }
 .item:hover { background: #f5f5f7; }
-.item .cover {
+.cover {
   width: 50px; height: 75px; border-radius: 4px; object-fit: cover;
   background: linear-gradient(135deg,#e0e0e5,#cfcfd4); flex: 0 0 auto;
-  display: grid; place-items: center; font-size: 1.2rem; color: #999;
 }
+.cover-fallback { display: grid; place-items: center; font-size: 1.4rem; color: #999; }
 .item .body { flex: 1; min-width: 0; }
 .item .title { font-weight: 500; line-height: 1.3; }
 .item .author { font-size: 0.85rem; color: #6e6e73; margin-top: 0.15rem; }
-.item .meta {
-  display: flex; align-items: center; gap: 0.5rem;
-  margin-top: 0.4rem; font-size: 0.8rem; color: #6e6e73;
+
+/* Action pills (love + watched) */
+.action-row {
+  display: flex; align-items: center; gap: 0.4rem;
+  margin-top: 0.5rem; flex-wrap: wrap;
 }
-.heart { color: #ff2d55; }
+.pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  border: 1px solid #d2d2d7;
+  background: white;
+  color: #6e6e73;
+  cursor: pointer;
+  transition: transform 0.05s, background 0.1s, color 0.1s;
+}
+.pill:hover { background: #f5f5f7; }
+.pill:active { transform: scale(0.94); }
+.pill .pill-icon { font-size: 0.95rem; line-height: 1; }
+.pill .pill-count { font-variant-numeric: tabular-nums; }
+.love-pill.on { background: #ff2d55; color: white; border-color: #ff2d55; }
+.love-pill.on:hover { background: #ff446a; }
+.watched-pill.on { background: #34c759; color: white; border-color: #34c759; }
+.watched-pill.on:hover { background: #4cd16d; }
+.added-by { font-size: 0.75rem; }
 
 /* Modals */
 .modal-backdrop {
@@ -137,19 +159,23 @@ header h1 { font-size: 1.25rem; }
   width: 110px; height: 165px; border-radius: 6px; object-fit: cover;
   background: linear-gradient(135deg,#e0e0e5,#cfcfd4); flex: 0 0 auto;
 }
-.detail-info h2 { font-size: 1.2rem; line-height: 1.3; }
+.detail-info h2 { font-size: 1.2rem; line-height: 1.3; margin-top: 0.2rem; }
 .detail-info .author { color: #424245; margin-top: 0.25rem; }
-.detail-info .added-by { color: #6e6e73; font-size: 0.85rem; margin-top: 0.5rem; }
+.detail-info .added-by { margin-top: 0.5rem; }
 .detail-notes {
   background: #f5f5f7; padding: 0.75rem; border-radius: 8px;
   font-size: 0.9rem; white-space: pre-wrap; margin-bottom: 1rem;
 }
+.detail-actions { margin: 0.5rem 0 1rem; }
 .lovers-section { margin: 1rem 0; }
 .lovers-section h3 { font-size: 0.95rem; margin-bottom: 0.5rem; color: #424245; }
-.lovers { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.lover-chip {
-  background: #ffe5ec; color: #c8003c;
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip {
+  background: #f0f0f3; color: #424245;
   padding: 0.25rem 0.6rem; border-radius: 999px;
   font-size: 0.85rem; font-weight: 500;
 }
-.lover-chip.you { background: #ff2d55; color: white; }
+.love-chips .chip { background: #ffe5ec; color: #c8003c; }
+.love-chips .chip.you { background: #ff2d55; color: white; }
+.watched-chips .chip { background: #e3f7e8; color: #1f7a37; }
+.watched-chips .chip.you { background: #34c759; color: white; }
